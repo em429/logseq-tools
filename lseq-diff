@@ -1,0 +1,34 @@
+#!/bin/bash
+# lseq-diff — display all changes from the last n days
+# Usage: lseq-diff 2
+
+# Check if LOGSEQ_GRAPH env var is defined
+if [ -z "$LOGSEQ_GRAPH" ]; then
+  echo "Error: LOGSEQ_GRAPH environment variable must be defined."
+  exit 1
+fi
+
+# Check if the number of days is provided as an argument
+if [ -z "$1" ]; then
+  echo "Usage: $0 <number_of_days>"
+  exit 1
+fi
+
+# Define the number of days
+DAYS_AGO="$1"
+
+IGNORE_PATTERN=${IGNORE_PATTERN:-"collapsed::|background-color::|card-repeats::|card-last-*|card-ease|card-next-*"}
+
+cd $LOGSEQ_GRAPH
+
+# Find the commit from the specified number of days ago
+COMMIT_FROM_DAYS_AGO=$(git rev-list -n 1 --before="$DAYS_AGO days ago" HEAD)
+
+# Check if a commit was found
+if [ -z "$COMMIT_FROM_DAYS_AGO" ]; then
+  echo "No commits found from $DAYS_AGO days ago."
+  exit 1
+fi
+
+# Get the diff from that commit to HEAD, preserving color, and filter out lines matching the pattern
+git diff --color=always "$COMMIT_FROM_DAYS_AGO" HEAD | grep --color=always -vE "$IGNORE_PATTERN"

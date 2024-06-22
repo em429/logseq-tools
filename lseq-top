@@ -1,0 +1,52 @@
+#!/usr/bin/env ruby
+# lseq-top — list top-level page hierarchies and their subpage count
+
+require 'set'
+
+def parse_path(path)
+  if path.include?('%2F')
+    path.split('%2F')[0]
+  else
+    path.split('.')[0]
+  end
+end
+
+def count_subpages(path, hierarchy_counts)
+  file_name = File.basename(path, ".*")
+  top_level = parse_path(file_name)
+  hierarchy_counts[top_level] += 1
+end
+
+def print_hierarchy_counts(hierarchy_counts)
+  hierarchy_counts.each do |hierarchy, count|
+    puts "#{hierarchy}/ - #{count} subpages"
+  end
+end
+
+def main
+  unless ENV['LOGSEQ_GRAPH']
+    puts "Error: LOGSEQ_GRAPH environment variable must be defined."
+    exit 1
+  end
+
+  # Get the pages directory from the environment variable
+  pages_dir = "#{ENV['LOGSEQ_GRAPH']}/pages"
+
+  unless Dir.exist?(pages_dir)
+    puts "#{pages_dir} is not a valid directory"
+    exit 1
+  end
+
+  hierarchy_counts = Hash.new(0)
+
+  Dir.foreach(pages_dir) do |filename|
+    file_path = File.join(pages_dir, filename)
+    if File.file?(file_path)
+      count_subpages(filename, hierarchy_counts)
+    end
+  end
+
+  print_hierarchy_counts(hierarchy_counts)
+end
+
+main

@@ -1,0 +1,90 @@
+#!/usr/bin/env ruby
+# Search for and rank pages in logseq graph by number of chars or lines
+#
+# Usage: lseq [-h] [-m] [-l] [-i] <page-name-substring>
+
+require 'optparse'
+
+def count_entities(filepath, mode)
+  content = File.read(filepath)
+  mode == 'lines' ? content.lines.size : content.size
+end
+
+def print_help
+  puts <<~HELP
+    Usage: lseq [-h] [-m] [-l] [-i] <page-name-substring>
+    Options:
+      -h, --help        Show this help message and exit
+      -m                Count characters (default)
+      -l                Count lines
+      -i                Ignore files starting with 'ARCHIVE'
+  HELP
+end
+
+def main
+  unless ENV['LOGSEQ_GRAPH']
+    puts "Error: LOGSEQ_GRAPH environment variable must be defined."
+    exit 1
+  end
+
+  directory = "#{ENV['LOGSEQ_GRAPH']}/pages"
+  mode = 'chars'
+  ignore_archive = false
+  substring = nil
+
+  options = {}
+  OptionParser.new do |opts|
+    opts.banner = "Usage: lseq [options] <page-name-substring>"
+
+    opts.on('-h', '--help', 'Show this help message and exit') do
+      print_help
+      exit
+    end
+
+    opts.on('-m', 'Count characters (default)') do
+      mode = 'chars'
+    end
+
+    opts.on('-l', 'Count lines') do
+      mode = 'lines'
+    end
+
+    opts.on('-i', 'Ignore files starting with ARCHIVE') do
+      ignore_archive = true
+    end
+  end.parse!
+
+  if ARGV.empty?
+    print_help
+    exit 1
+  end
+
+  substring = ARGV.pop
+
+  # Replace '/' with '%2F' in the substring
+  substring_with_percent2f = substring.gsub('/', '%2F')
+
+  # Replace '%2F' with '.' in the substring
+  substring_with_dot = substring_with_percent2f.gsub('%2F', '.')
+
+  matching_files = Dir.entries(directory).select do |filename|
+    next if ignore_archive && filename.start_with?('ARCHIVE')
+    filename.include?(substring_with_percent2f) || filename.include?(substring_with_dot)
+  end.compact.map do |filename|
+    filepath = File.join(directory, filename)
+    entity_count = count_entities(filepath, mode)
+    [filename, entity_count]
+  end
+
+  matching_files.sort_by! { |_, count| count }
+
+  entity_name = mode == 'lines' ? 'lines' : 'characters'
+  matching_files.each do |filename, entity_count|
+    base = File.basename(filename, '.*').gsub('%2F', ' / ').gsub('.', ' / ')
+    puts "#{entity_count}:\t #{base}"
+  end
+end
+
+if __FILE__ == $0
+  main
+end
