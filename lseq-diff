@@ -17,7 +17,17 @@ fi
 # Define the number of days
 DAYS_AGO="$1"
 
+# Define patterns to ignore in diff content
 IGNORE_PATTERN=${IGNORE_PATTERN:-"collapsed::|background-color::|card-repeats::|card-last-*|card-ease|card-next-*"}
+
+# Define file extensions to ignore (space-separated)
+IGNORE_EXTENSIONS="excalidraw DS_Store"
+
+# Prepare the exclude patterns for the excluded file extensions
+EXCLUDE_PATTERNS=""
+for ext in $IGNORE_EXTENSIONS; do
+  EXCLUDE_PATTERNS="$EXCLUDE_PATTERNS :(exclude)*.$ext"
+done
 
 cd $LOGSEQ_GRAPH
 
@@ -30,5 +40,5 @@ if [ -z "$COMMIT_FROM_DAYS_AGO" ]; then
   exit 1
 fi
 
-# Get the diff from that commit to HEAD, preserving color, and filter out lines matching the pattern
-git diff --color=always "$COMMIT_FROM_DAYS_AGO" HEAD | grep --color=always -vE "$IGNORE_PATTERN"
+# Get the diff from that commit to HEAD, preserving color, excluding specified files, and filter out lines matching the pattern
+git diff --color=always "$COMMIT_FROM_DAYS_AGO" HEAD -- . $EXCLUDE_PATTERNS | grep --color=always -vE "$IGNORE_PATTERN"
