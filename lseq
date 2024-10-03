@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # Search for and rank pages in logseq graph by number of chars or lines
 #
-# Usage: lseq [-h] [-m] [-l] [-i] <page-name-substring>
+# Usage: lseq [-h] [-m] [-l] [-i] [<page-name-substring>]
 
 require 'optparse'
 
@@ -12,7 +12,7 @@ end
 
 def print_help
   puts <<~HELP
-    Usage: lseq [-h] [-m] [-l] [-i] <page-name-substring>
+    Usage: lseq [-h] [-m] [-l] [-i] [<page-name-substring>]
     Options:
       -h, --help        Show this help message and exit
       -m                Count characters (default)
@@ -34,7 +34,7 @@ def main
 
   options = {}
   OptionParser.new do |opts|
-    opts.banner = "Usage: lseq [options] <page-name-substring>"
+    opts.banner = "Usage: lseq [options] [<page-name-substring>]"
 
     opts.on('-h', '--help', 'Show this help message and exit') do
       print_help
@@ -54,22 +54,18 @@ def main
     end
   end.parse!
 
-  if ARGV.empty?
-    print_help
-    exit 1
-  end
-
-  substring = ARGV.pop
-
-  # Replace '/' with '%2F' in the substring
-  substring_with_percent2f = substring.gsub('/', '%2F')
-
-  # Replace '%2F' with '.' in the substring
-  substring_with_dot = substring_with_percent2f.gsub('%2F', '.')
+  substring = ARGV.pop if ARGV.any?
 
   matching_files = Dir.entries(directory).select do |filename|
+    next if filename == '.' || filename == '..'
     next if ignore_archive && filename.start_with?('ARCHIVE')
-    filename.include?(substring_with_percent2f) || filename.include?(substring_with_dot)
+    if substring
+      substring_with_percent2f = substring.gsub('/', '%2F')
+      substring_with_dot = substring_with_percent2f.gsub('%2F', '.')
+      filename.include?(substring_with_percent2f) || filename.include?(substring_with_dot)
+    else
+      true
+    end
   end.compact.map do |filename|
     filepath = File.join(directory, filename)
     entity_count = count_entities(filepath, mode)
