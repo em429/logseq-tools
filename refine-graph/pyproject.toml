@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "logseq-graph-refiner"
+version = "0.1.0"
+description = "A tool to refine Logseq graph by removing unnecessary backlinks"
+requires-python = ">=3.8"
+dependencies = [
+    "click",
+    "rich",
+    "pathspec"
+]
+
+[project.scripts]
+logseq-refine = "logseq_graph_refiner.cli:main"
